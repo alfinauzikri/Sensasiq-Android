@@ -1,22 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sensasiq/Client/main_page.dart';
 import 'package:flutter/services.dart';
+import 'package:sensasiq/mainPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => new _LoginPageState();
 }
 
+String generateMd5(String input) {
+  return md5.convert(utf8.encode(input)).toString();
+}
+
 class _LoginPageState extends State<LoginPage> {
   TextEditingController nim = new TextEditingController();
   TextEditingController pass = new TextEditingController();
 
-  var username;
-  var nimnya;
+  var namamahasiswa, nimnya, passwordnya, deviceidnya, kelasnya;
 
   Future<List> _login() async {
     final response = await http.post("http://sensasiq.ml/sensasiq/api/mahasiswa", body: {
@@ -33,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
           child: new CupertinoAlertDialog(
             title: new Text("Gagal Masuk"),
             content: new Text(
-              "Harap Periksa NIM & Password",
+              "Pengguna Tidak Ditemukan",
               style: new TextStyle(fontSize: 16.0),
             ),
             actions: <Widget>[
@@ -45,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ));
     } else {
-      if (datauser['mahasiswa'][0]['password'] != pass.text) {
+      if (datauser['mahasiswa'][0]['password'] != generateMd5(pass.text) || datauser['mahasiswa'][0]['nim'] != nim.text) {
         showDialog(
             context: context,
             barrierDismissible: false,
@@ -53,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
             child: new CupertinoAlertDialog(
               title: new Text("Gagal Masuk"),
               content: new Text(
-                "Harap Periksa NIM & Password",
+                "Harap Periksa NIM\natau Kata Sandi",
                 style: new TextStyle(fontSize: 16.0),
               ),
               actions: <Widget>[
@@ -66,32 +70,23 @@ class _LoginPageState extends State<LoginPage> {
             ));
       } else {
         var route = new MaterialPageRoute(
-          builder: (BuildContext context) => new MainPage(username: username, nimnya: nimnya),
+          builder: (BuildContext context) => new MainPage(namamahasiswa: namamahasiswa, nimnya: nimnya, passwordnya: passwordnya, deviceidnya: deviceidnya, kelasnya: kelasnya),
         );
         Navigator.of(context).pushReplacement(route);
-        /*
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) {
-          return MainPage();
-        }));
-        */
         setState(() {
-          username = datauser['mahasiswa'][0]['nama_mahasiswa'];
+          namamahasiswa = datauser['mahasiswa'][0]['nama_mahasiswa'];
           nimnya = datauser['mahasiswa'][0]['nim'];
+          passwordnya = datauser['mahasiswa'][0]['password'];
+          deviceidnya = datauser['mahasiswa'][0]['device_id'];
+          kelasnya = datauser['mahasiswa'][0]['kelas'];
         });
       }
     }
-    return datauser;
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    /*
-    //Agar tidak bisa View Horizontal
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    */
     final logo = Hero(
       tag: 'hero',
       child: CircleAvatar(
@@ -103,10 +98,10 @@ class _LoginPageState extends State<LoginPage> {
 
     final email = TextFormField(
       controller: nim,
-      keyboardType: TextInputType.emailAddress,
+      keyboardType: TextInputType.number,
       autofocus: false,
       decoration: InputDecoration(
-        hintText: 'NIM',
+        hintText: 'Nomor Induk Mahasiswa',
         contentPadding: EdgeInsets.fromLTRB(20.0, 10.0, 20.0, 10.0),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(32.0)),
       ),
@@ -131,11 +126,6 @@ class _LoginPageState extends State<LoginPage> {
         ),
         onPressed: () {
           _login();
-          /*
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) {
-            return MainPage();
-          }));
-          */
         },
         padding: EdgeInsets.all(12),
         color: Colors.lightBlueAccent,
